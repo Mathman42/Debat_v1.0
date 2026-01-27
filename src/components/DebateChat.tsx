@@ -109,6 +109,7 @@ export default function DebateChat({ topic, standpoint, turnLimit, onBack, onFin
             standpoint: standpoint === 'VOOR' ? 'TEGEN' : 'VOOR',
             userInput: userMessage.content,
             isSensitive: topic.is_sensitive,
+            messages: updatedMessages,
           }),
         }
       );

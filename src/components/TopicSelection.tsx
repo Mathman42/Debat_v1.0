@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BookOpen, Leaf, Users, Smartphone, Sparkles, Heart, Trophy } from 'lucide-react';
+import { BookOpen, Leaf, Users, Smartphone, Sparkles, Heart, Trophy, RefreshCw } from 'lucide-react';
 import { supabase, DebateTopic } from '../lib/supabase';
 
 type TopicSelectionProps = {
@@ -46,7 +46,15 @@ export default function TopicSelection({ onSelectTopic }: TopicSelectionProps) {
         .order('category', { ascending: true });
 
       if (error) throw error;
-      setTopics(data || []);
+
+      const loadedTopics = data || [];
+      setTopics(loadedTopics);
+
+      // Auto-generate topics if list is empty
+      if (loadedTopics.length === 0 && !generating) {
+        console.log('No topics found, auto-generating...');
+        generateNewTopics();
+      }
     } catch (error) {
       console.error('Error loading topics:', error);
     } finally {
@@ -93,12 +101,38 @@ export default function TopicSelection({ onSelectTopic }: TopicSelectionProps) {
     }
   }
 
+  async function refreshAllTopics() {
+    setGenerating(true);
+    setGenerateMessage('');
+
+    try {
+      // Delete all existing topics
+      const { error: deleteError } = await supabase
+        .from('debate_topics')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+
+      if (deleteError) throw deleteError;
+
+      // Generate new topics
+      await generateNewTopics();
+    } catch (error) {
+      console.error('Error refreshing topics:', error);
+      setGenerateMessage('Fout bij verversen. Probeer het later opnieuw.');
+      setTimeout(() => setGenerateMessage(''), 5000);
+      setGenerating(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Laden...</p>
+          <p className="text-gray-600">Onderwerpen laden...</p>
+          {generating && (
+            <p className="text-sm text-gray-500 mt-2">Actuele onderwerpen genereren via AI...</p>
+          )}
         </div>
       </div>
     );
@@ -113,14 +147,27 @@ export default function TopicSelection({ onSelectTopic }: TopicSelectionProps) {
             Kies een onderwerp en oefen met debatteren
           </p>
 
-          <button
-            onClick={generateNewTopics}
-            disabled={generating}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg shadow-md hover:from-blue-600 hover:to-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
-          >
-            <Sparkles className={`w-5 h-5 ${generating ? 'animate-spin' : ''}`} />
-            {generating ? 'Nieuwe onderwerpen genereren...' : 'Genereer actuele onderwerpen'}
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={generateNewTopics}
+              disabled={generating}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg shadow-md hover:from-blue-600 hover:to-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
+            >
+              <Sparkles className={`w-5 h-5 ${generating ? 'animate-spin' : ''}`} />
+              {generating ? 'Bezig met genereren...' : 'Voeg onderwerpen toe'}
+            </button>
+
+            {topics.length > 0 && (
+              <button
+                onClick={refreshAllTopics}
+                disabled={generating}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-500 to-teal-600 text-white font-semibold rounded-lg shadow-md hover:from-teal-600 hover:to-teal-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
+              >
+                <RefreshCw className={`w-5 h-5 ${generating ? 'animate-spin' : ''}`} />
+                Vervang alle onderwerpen
+              </button>
+            )}
+          </div>
 
           {generateMessage && (
             <div className={`mt-4 px-4 py-2 rounded-lg inline-block ${

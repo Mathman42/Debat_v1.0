@@ -35,14 +35,89 @@ function generateSafetyResponse(): string {
 Laten we een ander debatonderwerp kiezen waar ik je beter mee kan helpen.`;
 }
 
-function generateDebateResponse(req: DebateRequest): string {
-  const { topic, standpoint, userInput } = req;
+async function generateAIResponse(req: DebateRequest): Promise<string> {
+  const { topic, standpoint, userInput, messages } = req;
+  const apiKey = Deno.env.get('PERPLEXITY_API_KEY');
+
+  if (!apiKey) {
+    console.log('Perplexity API key not found, using fallback responses');
+    return getNaturalResponse(topic, standpoint, userInput!);
+  }
+
+  const oppositeStandpoint = standpoint === 'VOOR' ? 'TEGEN' : 'VOOR';
+
+  const conversationHistory = messages && messages.length > 0
+    ? messages.slice(-4).map(m => `${m.role === 'user' ? 'Leerling' : 'Coach'}: ${m.content}`).join('\n')
+    : '';
+
+  const prompt = `Je bent een debatcoach voor middelbare scholieren in Nederland. Je debatteert met een leerling over: "${topic}".
+
+De leerling verdedigt het standpunt: ${standpoint}
+Jij verdedigt het standpunt: ${oppositeStandpoint}
+
+${conversationHistory ? `Gesprek tot nu toe:\n${conversationHistory}\n` : ''}
+
+De leerling zegt nu: "${userInput}"
+
+Reageer als debatcoach met een tegenargument op VO-niveau. Gebruik:
+- Actuele voorbeelden en feiten waar mogelijk
+- Een natuurlijke, toegankelijke toon
+- 2-3 zinnen maximaal
+- Concrete argumenten die uitdagen om kritisch na te denken
+
+Geef ALLEEN je tegenargument, geen extra uitleg of context.`;
+
+  try {
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-sonar-small-128k-online',
+        messages: [
+          {
+            role: 'system',
+            content: 'Je bent een behulpzame debatcoach voor Nederlandse middelbare scholieren. Gebruik actuele informatie en voorbeelden.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 200,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Perplexity API error:', response.status);
+      return getNaturalResponse(topic, standpoint, userInput!);
+    }
+
+    const data = await response.json();
+    const aiResponse = data.choices?.[0]?.message?.content?.trim();
+
+    if (aiResponse && aiResponse.length > 20) {
+      return aiResponse;
+    }
+
+    return getNaturalResponse(topic, standpoint, userInput!);
+  } catch (error) {
+    console.error('Error calling Perplexity API:', error);
+    return getNaturalResponse(topic, standpoint, userInput!);
+  }
+}
+
+async function generateDebateResponse(req: DebateRequest): Promise<string> {
+  const { topic, userInput } = req;
 
   if (containsSensitiveContent(topic) || containsSensitiveContent(userInput!)) {
     return generateSafetyResponse();
   }
 
-  return getNaturalResponse(topic, standpoint, userInput!);
+  return await generateAIResponse(req);
 }
 
 function getNaturalResponse(topic: string, standpoint: string, userInput: string): string {
@@ -233,7 +308,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const response = generateDebateResponse(body);
+    const response = await generateDebateResponse(body);
 
     return new Response(
       JSON.stringify({ response }),

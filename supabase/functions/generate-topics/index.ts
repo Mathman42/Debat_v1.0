@@ -48,7 +48,7 @@ Geef ALLEEN de JSON array terug, geen extra tekst.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-sonar-small-128k-online',
+        model: 'llama-3.1-sonar-small-128k-chat',
         messages: [
           {
             role: 'user',
@@ -57,14 +57,13 @@ Geef ALLEEN de JSON array terug, geen extra tekst.`;
         ],
         temperature: 0.2,
         max_tokens: 2000,
-        return_related_questions: false,
-        return_images: false,
-        return_citations: false,
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Perplexity API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('Perplexity API error details:', errorText);
+      throw new Error(`Perplexity API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();

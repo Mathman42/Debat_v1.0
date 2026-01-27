@@ -75,7 +75,7 @@ Geef ALLEEN je tegenargument, geen extra uitleg of context.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-sonar-small-128k-online',
+        model: 'llama-3.1-sonar-small-128k-chat',
         messages: [
           {
             role: 'user',
@@ -84,9 +84,6 @@ Geef ALLEEN je tegenargument, geen extra uitleg of context.`;
         ],
         temperature: 0.7,
         max_tokens: 300,
-        return_related_questions: false,
-        return_images: false,
-        return_citations: false,
       }),
     });
 

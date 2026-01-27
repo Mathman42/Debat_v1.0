@@ -76,7 +76,7 @@ export default function TopicSelection({ onSelectTopic }: TopicSelectionProps) {
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ count: 5 }),
+        body: JSON.stringify({ count: 4 }),
       });
 
       if (!response.ok) {

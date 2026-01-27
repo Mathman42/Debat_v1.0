@@ -27,7 +27,8 @@ Criteria:
 - Geschikt voor VO-niveau (niet te complex, maar wel uitdagend)
 - Twee duidelijke standpunten mogelijk (voor/tegen)
 - Niet te controversieel of gevoelig
-- Variatie in categorieën (technologie, milieu, onderwijs, maatschappij, gezondheid)
+- BELANGRIJK: Elk onderwerp moet uit een ANDERE categorie komen
+- Kies ${count} verschillende categorieën uit: technologie, milieu, onderwijs, maatschappij, gezondheid, sport
 
 Formatteer je antwoord als een JSON array met deze structuur:
 [
@@ -38,6 +39,7 @@ Formatteer je antwoord als een JSON array met deze structuur:
   }
 ]
 
+BELANGRIJK: Zorg dat elk onderwerp een UNIEKE categorie heeft.
 Geef ALLEEN de JSON array terug, geen extra tekst.`;
 
   try {

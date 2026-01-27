@@ -78,16 +78,15 @@ Geef ALLEEN je tegenargument, geen extra uitleg of context.`;
         model: 'llama-3.1-sonar-small-128k-online',
         messages: [
           {
-            role: 'system',
-            content: 'Je bent een behulpzame debatcoach voor Nederlandse middelbare scholieren. Gebruik actuele informatie en voorbeelden.'
-          },
-          {
             role: 'user',
             content: prompt
           }
         ],
         temperature: 0.7,
-        max_tokens: 200,
+        max_tokens: 300,
+        return_related_questions: false,
+        return_images: false,
+        return_citations: false,
       }),
     });
 

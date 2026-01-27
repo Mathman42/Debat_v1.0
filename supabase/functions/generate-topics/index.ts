@@ -51,16 +51,15 @@ Geef ALLEEN de JSON array terug, geen extra tekst.`;
         model: 'llama-3.1-sonar-small-128k-online',
         messages: [
           {
-            role: 'system',
-            content: 'Je bent een expert in het genereren van educatieve debatonderwerpen voor Nederlandse scholieren. Geef je antwoord altijd als valide JSON.'
-          },
-          {
             role: 'user',
             content: prompt
           }
         ],
-        temperature: 0.8,
-        max_tokens: 1000,
+        temperature: 0.2,
+        max_tokens: 2000,
+        return_related_questions: false,
+        return_images: false,
+        return_citations: false,
       }),
     });
 

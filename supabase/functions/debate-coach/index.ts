@@ -59,13 +59,21 @@ ${conversationHistory ? `Gesprek tot nu toe:\n${conversationHistory}\n` : ''}
 
 De leerling zegt nu: "${userInput}"
 
-Reageer als debatcoach met een tegenargument op VO-niveau. Gebruik:
-- Actuele voorbeelden en feiten waar mogelijk
-- Een natuurlijke, toegankelijke toon
-- 2-3 zinnen maximaal
-- Concrete argumenten die uitdagen om kritisch na te denken
+Je reactie moet uit TWEE delen bestaan:
 
-Geef ALLEEN je tegenargument, geen extra uitleg of context.`;
+1. ANALYSEER EN WEERLEG (indien nodig):
+   - Als het argument van de leerling zwakke punten heeft, logische fouten bevat, of te simplistisch is, weerleg dit dan eerst
+   - Wees constructief maar kritisch
+   - Als het argument sterk is, erken dit kort
+   - 1-2 zinnen maximaal
+
+2. EIGEN ARGUMENT:
+   - Kom daarna met je eigen argument voor het standpunt "${oppositeStandpoint}"
+   - Gebruik actuele voorbeelden en feiten waar mogelijk
+   - 2-3 zinnen maximaal
+   - Concrete argumenten die uitdagen om kritisch na te denken
+
+Gebruik een natuurlijke, toegankelijke toon op VO-niveau. Geef ALLEEN je reactie volgens deze structuur, geen extra uitleg.`;
 
   try {
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -225,25 +233,62 @@ function generateSummary(messages: Array<{ role: string; content: string }>, use
     }
   }
 
-  let score = 5;
+  let score = 4;
   const turnCount = userMessages.length;
 
+  // Evaluate argument quality based on length and substance
+  let substantiveArguments = 0;
+  let shortArguments = 0;
+
+  for (const msg of userMessages) {
+    const content = msg.content.trim();
+    const wordCount = content.split(/\s+/).length;
+
+    // Check for substance indicators: questions, examples, reasoning words
+    const hasSubstance = content.includes('omdat') || content.includes('want') ||
+                        content.includes('bijvoorbeeld') || content.includes('waarom') ||
+                        content.includes('maar') || content.includes('echter') ||
+                        content.includes('daarom') || content.includes('dus') ||
+                        wordCount > 20;
+
+    if (hasSubstance) {
+      substantiveArguments++;
+    } else if (wordCount < 10) {
+      shortArguments++;
+    }
+  }
+
+  // Score based on argument quality
+  const substantiveRatio = substantiveArguments / Math.max(1, turnCount);
+
+  if (substantiveRatio > 0.7) score += 3;
+  else if (substantiveRatio > 0.5) score += 2;
+  else if (substantiveRatio > 0.3) score += 1;
+
+  // Bonus for turn count (engagement)
   if (turnCount >= 5) score += 1;
   if (turnCount >= 8) score += 1;
 
-  const avgLength = userMessages.reduce((sum, m) => sum + m.content.length, 0) / userMessages.length;
-  if (avgLength > 100) score += 1;
-  if (avgLength > 200) score += 1;
+  // Penalty for too many short arguments
+  if (shortArguments > turnCount * 0.4) score -= 1;
 
-  score = Math.min(10, Math.max(4, score));
+  // Bonus for consistent engagement (average length)
+  const avgLength = userMessages.reduce((sum, m) => sum + m.content.length, 0) / userMessages.length;
+  if (avgLength > 150) score += 1;
+  if (avgLength > 250) score += 1;
+
+  score = Math.min(10, Math.max(3, score));
 
   let feedback = '';
+  const goodArgumentCount = substantiveArguments;
+  const weakArgumentCount = shortArguments;
+
   if (score >= 8) {
-    feedback = `Uitstekend gedaan! Je hebt ${turnCount} sterke argumenten ingebracht en je standpunt "${userStandpoint}" overtuigend verdedigd. Je liet zien dat je goed kon luisteren naar tegenargumenten en daar adequaat op kon reageren.`;
+    feedback = `Uitstekend gedaan! Je hebt ${goodArgumentCount} sterke argumenten met goede onderbouwing ingebracht en je standpunt "${userStandpoint}" overtuigend verdedigd. Je liet zien dat je tegenargumenten kon weerleggen en met eigen sterke argumenten kwam.`;
   } else if (score >= 6) {
-    feedback = `Goed geprobeerd! Je verdedigde het standpunt "${userStandpoint}" met ${turnCount} argumenten. Probeer volgende keer meer diepgang toe te voegen en uitgebreider in te gaan op de tegenargumenten van de coach.`;
+    feedback = `Goed geprobeerd! Je verdedigde het standpunt "${userStandpoint}" met ${turnCount} argumenten, waarvan ${goodArgumentCount} goed onderbouwd waren. Probeer volgende keer meer diepgang toe te voegen en uitgebreider in te gaan op de tegenargumenten van de coach voordat je met je eigen argument komt.`;
   } else {
-    feedback = `Je hebt het standpunt "${userStandpoint}" verdedigd met ${turnCount} reacties. Probeer volgende keer uitgebreidere argumenten te geven en concrete voorbeelden te gebruiken om je punt te maken.`;
+    feedback = `Je hebt het standpunt "${userStandpoint}" verdedigd met ${turnCount} reacties. Probeer volgende keer uitgebreidere argumenten te geven met concrete voorbeelden en duidelijke redenering. Ga eerst in op wat de coach zegt voordat je je eigen argument geeft.`;
   }
 
   return {
